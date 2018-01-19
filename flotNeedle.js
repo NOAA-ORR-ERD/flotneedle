@@ -126,14 +126,22 @@
                     if (series.fillArea && (series.data[j] || series.data[j-1])){
                         var min;
                         var max;
+                        
+                        if (series.data[j]){
+                            min = series.data[j][3];
+                            max = series.data[j][4];
+                        } else if (needle.x > -1) {
+                            min = series.data[j-1][3];
+                            max = series.data[j-1][4];
+                        }
 
-                        if (needle.x > -1 && j > 0){
+/*                         if (needle.x > -1 && j > 0){
                             min = series.data[j-1][3];
                             max = series.data[j-1][4];
                         } else {
                             min = series.data[j][3];
                             max = series.data[j][4];
-                        }
+                        } */
 
                         if(series.needle && series.needle.label){
                             points.push([needle.axes_x, min, series.needle.label(min, series.yaxis.n), series.color, series.yaxis.n]);
