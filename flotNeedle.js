@@ -174,7 +174,6 @@
 
             // sort least to greatest
             keys.sort(function(a, b) {
-                //return b - a;
                 return a - b;
             });
 
