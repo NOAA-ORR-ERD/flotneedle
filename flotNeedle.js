@@ -62,20 +62,29 @@
             for(var i = 0; i < keys.length; i++){
                 var tooltip = drawSet[keys[i]];
 
-                var rectXPosition = needle.x + 2;
-                var textXPosition = needle.x + 5;
-
-                var textWidth = ctx.measureText(tooltip.text).width + 5;
-
-                if (needle.x + textWidth > plot.width()){
-                    rectXPosition -= textWidth + 4;
-                    textXPosition -= textWidth + 6;
+                if (tooltip && tooltip.hasOwnProperty('text')) {
+                    var rectXPosition = needle.x + 2;
+                    var textXPosition = needle.x + 5;
+    
+                    var textWidth = ctx.measureText(tooltip.text).width + 5;
+    
+                    if (needle.x + textWidth > plot.width()){
+                        rectXPosition -= textWidth + 4;
+                        textXPosition -= textWidth + 6;
+                    }
+    
+                    ctx.fillStyle = 'rgba(255,255,255, 0.8)';
+                    ctx.fillRect(rectXPosition, keys[i] - 15, textWidth, 20);
+                    ctx.fillStyle = tooltip.color;
+                    ctx.fillText(tooltip.text, textXPosition, keys[i]);
                 }
-
-                ctx.fillStyle = 'rgba(255,255,255, 0.8)';
-                ctx.fillRect(rectXPosition, keys[i] - 15, textWidth, 20);
-                ctx.fillStyle = tooltip.color;
-                ctx.fillText(tooltip.text, textXPosition, keys[i]);
+                else {
+                    console.warn('tooltip has no text property:',
+                                 'drawSet[keys[' + i + ']] = ' +
+                                 'drawSet[' + keys[i] + '] = ' +
+                                 tooltip + ',',
+                                 'keys =', keys);
+                }
             }
         }
 
@@ -158,53 +167,35 @@
             return points;
         }
 
-        function padTooltips(tooltips){
-            var distance = 20;
-            var keys = Object.keys(tooltips);
-            // convert each key to an int.
-            for (var j = 0; j < keys.length; j++){
-                keys[j] = parseInt(keys[j], 10);
-            }
+        function padTooltips(tooltips) {
+            let padding = 20;
+            let keys = Object.keys(tooltips).map(k => (parseInt(k, 10)));
+            let newKeys = [];
 
             // sort least to greatest
-            keys.sort(function(a, b){
-                return b - a;
+            keys.sort(function(a, b) {
+                //return b - a;
+                return a - b;
             });
 
-            // for each key make sure it's `distance` from the previous value in the index order
+            // Generate new key list, making sure each key's `distance`
+            // from the previous key is at least a certain padded value.
             // ex: [45, 46, 47] => [45, 65, 85]
-            for(var k = 1; k < keys.length; k++){
-                var current = keys[k];
-                // check previous value if it exists
-                if(keys[k-1]){
-                    var prev = keys[k-1];
-                    // check if the value is with in `distanct`
-                    if(Math.abs(prev - current) < distance){
-                        // it is so find where it should shift to
-                        current = Math.abs(prev - distance);
-
-                        // get the tooltips you're going to shift
-                        tooltip = tooltips[keys[k]];
-                        // remove the old reference
-                        delete tooltips[keys[k]];
-                        // check if the new position isn't already full
-                        if(tooltips[current]){
-                            // it is so shift it over 1 position on the tooltip object
-                            tooltips[current+1] = tooltips[current];
-                            // and any key in the keys array
-                            for(var s = 0; s < keys.length; s++){
-                                if(keys[s] === current){
-                                    keys[s]++;
-                                }
-                            }
-                        }
-                        // move it to the new position
-                        tooltips[current] = tooltip;
-                        // update the keys with the new position
-                        keys[k] = current;
-                    }
+            for (let i = 0; i < keys.length; i++) {
+                if (i === 0) {
+                    newKeys[i] = keys[i];
                 }
+                else {
+                    newKeys[i] = Math.max(keys[i], newKeys[i - 1] + padding);
+                }
+            }
 
+            // modify our tooltips, changing the old keys to the new keys
+            for (let i = 0; i < keys.length; i++) {
+                if (keys[i] !== newKeys[i]) {
+                    tooltips[newKeys[i]] = tooltips[keys[i]];
+                    delete tooltips[keys[i]];
+                }
             }
 
             return tooltips;
@@ -238,7 +229,8 @@
 
                 if (points[k][4] === 1) {
                     pointObj = {coords: {x: points[k][0], y: points[k][1]}, text: points[k][2], color: points[k][3]};
-                } else {
+                }
+                else {
                     pointObj = {coords: {x: points[k][0], y2: points[k][1]}, text: points[k][2], color: points[k][3]};
                 }
 
@@ -246,24 +238,26 @@
             }
 
             // convert data array to tooltip objects;
-            for(var p = 0; p < pointsArr.length; p++){
-                var coords = plot.p2c(pointsArr[p].coords);
-                var text = pointsArr[p].text;
-                var color = pointsArr[p].color;
+            for (var p = 0; p < pointsArr.length; p++) {
                 var tooltip = {
-                    text: text,
-                    color: color
+                    text: pointsArr[p].text,
+                    color: pointsArr[p].color
                 };
 
+                var coords = plot.p2c(pointsArr[p].coords);
                 coords.top = parseInt(coords.top, 10);
 
-                if(tooltips[coords.top] === undefined){
+                if (tooltips[coords.top] === undefined) {
                     tooltips[coords.top] = tooltip;
-                } else {
+                }
+                else {
                     var top = coords.top;
-                    do{
+
+                    do {
                         top++;
-                    } while (tooltips[top] !== undefined);
+                    }
+                    while (tooltips[top] !== undefined);
+
                     tooltips[top] = tooltip;
                 }
             }
